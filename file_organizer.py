@@ -18,6 +18,7 @@ FILE_TYPES = {
     "Videos": ['mp4', 'mkv', 'avi', 'mov'],
     "Audio": ['mp3', 'wav', 'aac'],
     "Archives": ['zip', 'rar', '7z', 'tar', 'gz'],
+    "Icon": ['ico'],
 }
 
 def organize_file(file_path, file_name, extension):
@@ -77,3 +78,4 @@ if __name__ == "__main__":
     organize_existing_files()
    
     start_monitoring()
+
