@@ -1,165 +1,245 @@
-# Simple File Organizer - User Guide
+import os
+import shutil
+import hashlib
+import smtplib
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from email.mime.text import MIMEText
+from plyer import notification
+from PIL import Image, ImageTk   # For icons
 
-## Quick Start Guide
+# ---------------- LOGIN SYSTEM ----------------
+USERS = {"admin": "1234"}  # username:password
 
-### Step 1: Download and Test
-1. Save `file_organizer.py` to your computer
-2. Open terminal/command prompt
-3. Test with dry run first:
-   ```bash
-   python file_organizer.py ~/Downloads --dry-run
-   ```
+def login(username, password):
+    return USERS.get(username) == password
 
-### Step 2: Organize Files
-If the preview looks good:
-```bash
-python file_organizer.py ~/Downloads
-```
-Type `y` and press Enter to confirm.
+# ---------------- FILE TYPES ----------------
+FILE_TYPES = {
+    "Images": ['jpg', 'jpeg', 'png', 'gif'],
+    "Documents": ['pdf', 'docx', 'txt'],
+    "Videos": ['mp4', 'mkv', 'avi'],
+    "Audio": ['mp3', 'wav'],
+    "Archives": ['zip', 'rar'],
+    "Spreadsheets": ['xlsx', 'csv'],
+    "Presentations": ['pptx'],
+    "Others": []
+}
 
-## Understanding the Output
+last_actions = []  # For undo
 
-### Dry Run Example
-```
-File Organizer
-Target: /Users/john/Downloads  
-Mode: DRY RUN
-========================================
-Found 8 files to organize
-----------------------------------------
-[DRY RUN] report.pdf -> Documents/
-[DRY RUN] vacation.jpg -> Images/
-[DRY RUN] song.mp3 -> Audio/
-[DRY RUN] backup.zip -> Archives/
-```
+def organize_files(src, dst):
+    if not os.path.exists(dst):
+        os.makedirs(dst)
 
-### Actual Organization Example
-```
-File Organizer
-Target: /Users/john/Downloads
-Mode: ORGANIZE FILES
-========================================
-Proceed with organizing files? (y/N): y
-Found 8 files to organize
-----------------------------------------
-Moved: report.pdf -> Documents/
-Moved: vacation.jpg -> Images/
-Moved: song.mp3 -> Audio/
-Moved: backup.zip -> Archives/
-----------------------------------------
-Summary: 8 files moved, 0 errors
-```
+    moved_files = []
+    for filename in os.listdir(src):
+        file_path = os.path.join(src, filename)
+        if os.path.isfile(file_path):
+            ext = filename.split('.')[-1].lower()
+            moved = False
+            for category, extensions in FILE_TYPES.items():
+                if ext in extensions:
+                    folder = os.path.join(dst, category)
+                    os.makedirs(folder, exist_ok=True)
+                    new_path = os.path.join(folder, filename)
+                    shutil.move(file_path, new_path)
+                    moved_files.append((new_path, file_path))
+                    moved = True
+                    break
+            if not moved:
+                other_folder = os.path.join(dst, "Others")
+                os.makedirs(other_folder, exist_ok=True)
+                new_path = os.path.join(other_folder, filename)
+                shutil.move(file_path, new_path)
+                moved_files.append((new_path, file_path))
+    last_actions.append(moved_files)
 
-## File Categories Explained
+def undo_last_action():
+    if not last_actions:
+        return False
+    moved_files = last_actions.pop()
+    for new_path, old_path in moved_files:
+        if os.path.exists(new_path):
+            shutil.move(new_path, old_path)
+    return True
 
-| Category | File Types | Examples |
-|----------|------------|----------|
-| **Documents** | Text, PDF, Office files | `.pdf`, `.docx`, `.txt`, `.xlsx` |
-| **Images** | Pictures and graphics | `.jpg`, `.png`, `.gif`, `.svg` |
-| **Videos** | Movie and video files | `.mp4`, `.avi`, `.mkv`, `.mov` |
-| **Audio** | Music and sound files | `.mp3`, `.wav`, `.flac`, `.aac` |
-| **Archives** | Compressed files | `.zip`, `.rar`, `.7z`, `.tar` |
-| **Code** | Programming files | `.py`, `.html`, `.css`, `.js` |
-| **Others** | Anything else | `.xyz`, `.unknown` |
+# ---------------- BACKUP ----------------
+def backup_files(src, dst_folder="backups"):
+    os.makedirs(dst_folder, exist_ok=True)
+    backup_path = os.path.join(dst_folder, "backup")
+    shutil.make_archive(backup_path, 'zip', src)
+    return backup_path + ".zip"
 
-## Common Scenarios
+# ---------------- JUNK DETECTION ----------------
+def detect_junk(folder):
+    junk_exts = ['tmp', 'log', 'bak']
+    return [os.path.join(root, f) for root, _, files in os.walk(folder) for f in files if f.split('.')[-1].lower() in junk_exts]
 
-### Scenario 1: Messy Downloads Folder
-**Problem**: Downloads folder has 50+ mixed files
-**Solution**: 
-```bash
-python file_organizer.py ~/Downloads --dry-run
-python file_organizer.py ~/Downloads
-```
+# ---------------- MALWARE SCAN ----------------
+def scan_malware(folder):
+    known_hashes = {"e99a18c428cb38d5f260853678922e03"}  # example MD5
+    infected = []
+    for root, _, files in os.walk(folder):
+        for file in files:
+            try:
+                with open(os.path.join(root, file), "rb") as f:
+                    if hashlib.md5(f.read()).hexdigest() in known_hashes:
+                        infected.append(os.path.join(root, file))
+            except:
+                pass
+    return infected
 
-### Scenario 2: Project Files
-**Problem**: Project folder has mixed code, docs, and media
-**Solution**:
-```bash
-python file_organizer.py /path/to/project --dry-run
-python file_organizer.py /path/to/project
-```
+# ---------------- NOTIFICATION ----------------
+def send_notification(title, message):
+    notification.notify(title=title, message=message, timeout=5)
 
-### Scenario 3: USB Drive Cleanup
-**Problem**: USB drive with various file types
-**Solution**:
-```bash
-python file_organizer.py /Volumes/USB_DRIVE --dry-run
-python file_organizer.py /Volumes/USB_DRIVE
-```
+# ---------------- EMAIL ALERT ----------------
+def send_email_alert(to_email, subject, body):
+    from_email = "anku5149@gmail.com"
+    password = "drqn nrgk kwyv ouiz"  # App password required
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = from_email
+    msg["To"] = to_email
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(from_email, password)
+            server.sendmail(from_email, to_email, msg.as_string())
+        return True
+    except Exception as e:
+        print("Email failed:", e)
+        return False
 
-## Troubleshooting
+# ---------------- GUI ----------------
+class SmartOrganizerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Smart File Organizer")
+        self.root.geometry("850x500")
+        self.root.configure(bg="#1e1e2f")
 
-### Common Issues
+        self.src_var = tk.StringVar()
+        self.dst_var = tk.StringVar()
 
-**"Directory does not exist"**
-- Check the path is correct
-- Use quotes around paths with spaces: `"~/My Downloads"`
+        # Sidebar
+        sidebar = tk.Frame(root, bg="#2a2a3d", width=200)
+        sidebar.pack(side="left", fill="y")
 
-**"Permission denied"**
-- Close any programs using the files
-- Run as administrator (Windows) or with sudo (Mac/Linux)
+        tk.Label(sidebar, text="📂 Smart Organizer", font=("Arial", 14, "bold"), bg="#2a2a3d", fg="white").pack(pady=20)
 
-**Files not moving**
-- Ensure files aren't currently open
-- Check available disk space
+        buttons = [
+            ("📑 Organize Files", self.organize),
+            ("↩️ Undo", self.undo),
+            ("💾 Backup", self.backup),
+            ("🧹 Detect Junk", self.check_junk),
+            ("⚠️ Scan Malware", self.check_malware),
+            ("✉️ Send Email", self.send_email)
+        ]
 
-### Getting Help
-```bash
-python file_organizer.py
-# Shows usage instructions
+        for txt, cmd in buttons:
+            b = tk.Button(sidebar, text=txt, command=cmd, bg="#3a3a4f", fg="white", relief="flat", pady=10, anchor="w")
+            b.pack(fill="x", padx=15, pady=5)
 
-python file_organizer.py ~/Downloads --dry-run
-# Always test first!
-```
+        # Main panel
+        main_panel = tk.Frame(root, bg="#1e1e2f")
+        main_panel.pack(side="right", expand=True, fill="both", padx=20, pady=20)
 
-## Tips and Best Practices
+        tk.Label(main_panel, text="Source Folder", bg="#1e1e2f", fg="white").pack(anchor="w")
+        tk.Entry(main_panel, textvariable=self.src_var, width=50).pack()
+        tk.Button(main_panel, text="Browse", command=self.browse_src, bg="#3a3a4f", fg="white").pack(pady=5)
 
-### Before You Start
-1. **Always use dry run first** (`--dry-run`)
-2. **Close any open files** in the target directory
-3. **Backup important files** if unsure
-4. **Start with a small test folder** to get familiar
+        tk.Label(main_panel, text="Destination Folder", bg="#1e1e2f", fg="white").pack(anchor="w")
+        tk.Entry(main_panel, textvariable=self.dst_var, width=50).pack()
+        tk.Button(main_panel, text="Browse", command=self.browse_dst, bg="#3a3a4f", fg="white").pack(pady=5)
 
-### Best Results
-- Use on folders with mixed file types (Downloads, Desktop, etc.)
-- Perfect for cleaning up project folders
-- Great for organizing USB drives and external storage
-- Ideal for sorting through old archive folders
+        self.status_label = tk.Label(main_panel, text="Status: Ready", bg="#1e1e2f", fg="lightgreen", anchor="w")
+        self.status_label.pack(fill="x", pady=10)
 
-### What Gets Organized
-✅ Regular files with recognized extensions  
-✅ Files in the root of the target directory  
-❌ Files in subdirectories (they stay put)  
-❌ Hidden files (starting with '.')  
-❌ System files  
+    def browse_src(self):
+        self.src_var.set(filedialog.askdirectory())
 
-### File Naming Conflicts
-If a file with the same name already exists in the destination folder:
-- `document.pdf` becomes `document_1.pdf`
-- `document_1.pdf` becomes `document_2.pdf`
-- And so on...
+    def browse_dst(self):
+        self.dst_var.set(filedialog.askdirectory())
 
-## Platform-Specific Notes
+    def update_status(self, text, color="lightgreen"):
+        self.status_label.config(text=f"Status: {text}", fg=color)
 
-### Windows
-```cmd
-python file_organizer.py C:\Users\Username\Downloads --dry-run
-python file_organizer.py "C:\Path With Spaces" --dry-run
-```
+    def organize(self):
+        organize_files(self.src_var.get(), self.dst_var.get())
+        send_notification("Organizer", "Files organized successfully")
+        self.update_status("Files organized successfully")
+        if messagebox.askyesno("Backup", "Do you want to create a backup?"):
+            self.backup()
 
-### macOS
-```bash
-python3 file_organizer.py ~/Downloads --dry-run
-python3 file_organizer.py /Users/username/Desktop --dry-run
-```
+    def undo(self):
+        if undo_last_action():
+            self.update_status("Undo successful")
+        else:
+            self.update_status("Nothing to undo", "orange")
 
-### Linux
-```bash
-python3 file_organizer.py ~/Downloads --dry-run
-python3 file_organizer.py /home/username/Documents --dry-run
-```
+    def backup(self):
+        path = backup_files(self.src_var.get())
+        self.update_status(f"Backup created: {path}")
 
-## Summary
+    def check_junk(self):
+        junk = detect_junk(self.src_var.get())
+        if junk:
+            messagebox.showwarning("Junk Files", "\n".join(junk))
+            self.update_status("Junk files found", "orange")
+        else:
+            self.update_status("No junk files", "lightgreen")
 
-This simple file organizer helps you quickly clean up messy folders by sorting files into logical categories. Always test with `--dry-run` first, then run the actual organization when you're satisfied with the preview.
+    def check_malware(self):
+        infected = scan_malware(self.src_var.get())
+        if infected:
+            messagebox.showerror("Malware Found", "\n".join(infected))
+            self.update_status("Malware detected", "red")
+        else:
+            self.update_status("No malware found")
+
+    def send_email(self):
+        success = send_email_alert("recipient@example.com", "Organizer Alert", "This is a test alert from Smart Organizer.")
+        if success:
+            self.update_status("Email sent successfully")
+        else:
+            self.update_status("Email failed", "red")
+
+# ---------------- LOGIN WINDOW ----------------
+class LoginWindow:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Login - Smart Organizer")
+        self.root.geometry("400x250")
+        self.root.configure(bg="#1e1e2f")
+
+        tk.Label(root, text="Login", font=("Arial", 18, "bold"), bg="#1e1e2f", fg="white").pack(pady=20)
+
+        tk.Label(root, text="Username", bg="#1e1e2f", fg="white").pack()
+        self.username = tk.Entry(root)
+        self.username.pack(pady=5)
+
+        tk.Label(root, text="Password", bg="#1e1e2f", fg="white").pack()
+        self.password = tk.Entry(root, show="*")
+        self.password.pack(pady=5)
+
+        tk.Button(root, text="Login", command=self.check_login, bg="#3a3a4f", fg="white").pack(pady=15)
+
+    def check_login(self):
+        user = self.username.get()
+        pwd = self.password.get()
+        if login(user, pwd):
+            self.root.destroy()
+            main_app()
+        else:
+            messagebox.showerror("Error", "Invalid credentials!")
+
+def main_app():
+    root = tk.Tk()
+    app = SmartOrganizerApp(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    login_root = tk.Tk()
+    LoginWindow(login_root)
+    login_root.mainloop()
