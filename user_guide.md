@@ -1,245 +1,361 @@
-import os
-import shutil
-import hashlib
-import smtplib
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from email.mime.text import MIMEText
-from plyer import notification
-from PIL import Image, ImageTk   # For icons
+📘 Smart File Organizer — User Guide
+🧩 Version
 
-# ---------------- LOGIN SYSTEM ----------------
-USERS = {"admin": "1234"}  # username:password
+Smart File Organizer v1.0.0
 
-def login(username, password):
-    return USERS.get(username) == password
+🧑‍💻 Developed by
 
-# ---------------- FILE TYPES ----------------
-FILE_TYPES = {
-    "Images": ['jpg', 'jpeg', 'png', 'gif'],
-    "Documents": ['pdf', 'docx', 'txt'],
-    "Videos": ['mp4', 'mkv', 'avi'],
-    "Audio": ['mp3', 'wav'],
-    "Archives": ['zip', 'rar'],
-    "Spreadsheets": ['xlsx', 'csv'],
-    "Presentations": ['pptx'],
-    "Others": []
-}
+Ankita Kamble
 
-last_actions = []  # For undo
+🏠 Table of Contents
 
-def organize_files(src, dst):
-    if not os.path.exists(dst):
-        os.makedirs(dst)
+Introduction
 
-    moved_files = []
-    for filename in os.listdir(src):
-        file_path = os.path.join(src, filename)
-        if os.path.isfile(file_path):
-            ext = filename.split('.')[-1].lower()
-            moved = False
-            for category, extensions in FILE_TYPES.items():
-                if ext in extensions:
-                    folder = os.path.join(dst, category)
-                    os.makedirs(folder, exist_ok=True)
-                    new_path = os.path.join(folder, filename)
-                    shutil.move(file_path, new_path)
-                    moved_files.append((new_path, file_path))
-                    moved = True
-                    break
-            if not moved:
-                other_folder = os.path.join(dst, "Others")
-                os.makedirs(other_folder, exist_ok=True)
-                new_path = os.path.join(other_folder, filename)
-                shutil.move(file_path, new_path)
-                moved_files.append((new_path, file_path))
-    last_actions.append(moved_files)
+System Requirements
 
-def undo_last_action():
-    if not last_actions:
-        return False
-    moved_files = last_actions.pop()
-    for new_path, old_path in moved_files:
-        if os.path.exists(new_path):
-            shutil.move(new_path, old_path)
-    return True
+Installation Guide
 
-# ---------------- BACKUP ----------------
-def backup_files(src, dst_folder="backups"):
-    os.makedirs(dst_folder, exist_ok=True)
-    backup_path = os.path.join(dst_folder, "backup")
-    shutil.make_archive(backup_path, 'zip', src)
-    return backup_path + ".zip"
+Launching the Application
 
-# ---------------- JUNK DETECTION ----------------
-def detect_junk(folder):
-    junk_exts = ['tmp', 'log', 'bak']
-    return [os.path.join(root, f) for root, _, files in os.walk(folder) for f in files if f.split('.')[-1].lower() in junk_exts]
+Login Screen
 
-# ---------------- MALWARE SCAN ----------------
-def scan_malware(folder):
-    known_hashes = {"e99a18c428cb38d5f260853678922e03"}  # example MD5
-    infected = []
-    for root, _, files in os.walk(folder):
-        for file in files:
-            try:
-                with open(os.path.join(root, file), "rb") as f:
-                    if hashlib.md5(f.read()).hexdigest() in known_hashes:
-                        infected.append(os.path.join(root, file))
-            except:
-                pass
-    return infected
+Main Interface Overview
 
-# ---------------- NOTIFICATION ----------------
-def send_notification(title, message):
-    notification.notify(title=title, message=message, timeout=5)
+Feature-by-Feature Instructions
 
-# ---------------- EMAIL ALERT ----------------
-def send_email_alert(to_email, subject, body):
-    from_email = "anku5149@gmail.com"
-    password = "drqn nrgk kwyv ouiz"  # App password required
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = from_email
-    msg["To"] = to_email
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(from_email, password)
-            server.sendmail(from_email, to_email, msg.as_string())
-        return True
-    except Exception as e:
-        print("Email failed:", e)
-        return False
+1. Organize Files
 
-# ---------------- GUI ----------------
-class SmartOrganizerApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Smart File Organizer")
-        self.root.geometry("850x500")
-        self.root.configure(bg="#1e1e2f")
+2. Undo Changes
 
-        self.src_var = tk.StringVar()
-        self.dst_var = tk.StringVar()
+3. Backup Manager
 
-        # Sidebar
-        sidebar = tk.Frame(root, bg="#2a2a3d", width=200)
-        sidebar.pack(side="left", fill="y")
+4. Junk File Detection
 
-        tk.Label(sidebar, text="📂 Smart Organizer", font=("Arial", 14, "bold"), bg="#2a2a3d", fg="white").pack(pady=20)
+5. Harmful File Scan
 
-        buttons = [
-            ("📑 Organize Files", self.organize),
-            ("↩️ Undo", self.undo),
-            ("💾 Backup", self.backup),
-            ("🧹 Detect Junk", self.check_junk),
-            ("⚠️ Scan Malware", self.check_malware),
-            ("✉️ Send Email", self.send_email)
-        ]
+6. Email Alerts
 
-        for txt, cmd in buttons:
-            b = tk.Button(sidebar, text=txt, command=cmd, bg="#3a3a4f", fg="white", relief="flat", pady=10, anchor="w")
-            b.pack(fill="x", padx=15, pady=5)
+Notifications
 
-        # Main panel
-        main_panel = tk.Frame(root, bg="#1e1e2f")
-        main_panel.pack(side="right", expand=True, fill="both", padx=20, pady=20)
+Supported File Types
 
-        tk.Label(main_panel, text="Source Folder", bg="#1e1e2f", fg="white").pack(anchor="w")
-        tk.Entry(main_panel, textvariable=self.src_var, width=50).pack()
-        tk.Button(main_panel, text="Browse", command=self.browse_src, bg="#3a3a4f", fg="white").pack(pady=5)
+Backup Folder Information
 
-        tk.Label(main_panel, text="Destination Folder", bg="#1e1e2f", fg="white").pack(anchor="w")
-        tk.Entry(main_panel, textvariable=self.dst_var, width=50).pack()
-        tk.Button(main_panel, text="Browse", command=self.browse_dst, bg="#3a3a4f", fg="white").pack(pady=5)
+Troubleshooting
 
-        self.status_label = tk.Label(main_panel, text="Status: Ready", bg="#1e1e2f", fg="lightgreen", anchor="w")
-        self.status_label.pack(fill="x", pady=10)
+Frequently Asked Questions (FAQ)
 
-    def browse_src(self):
-        self.src_var.set(filedialog.askdirectory())
+Safety and Privacy Notes
 
-    def browse_dst(self):
-        self.dst_var.set(filedialog.askdirectory())
+Credits & License
 
-    def update_status(self, text, color="lightgreen"):
-        self.status_label.config(text=f"Status: {text}", fg=color)
+🧠 Introduction
 
-    def organize(self):
-        organize_files(self.src_var.get(), self.dst_var.get())
-        send_notification("Organizer", "Files organized successfully")
-        self.update_status("Files organized successfully")
-        if messagebox.askyesno("Backup", "Do you want to create a backup?"):
-            self.backup()
+The Smart File Organizer is a desktop application that helps you automatically manage, categorize, and back up files with just one click.
 
-    def undo(self):
-        if undo_last_action():
-            self.update_status("Undo successful")
-        else:
-            self.update_status("Nothing to undo", "orange")
+It’s designed to:
 
-    def backup(self):
-        path = backup_files(self.src_var.get())
-        self.update_status(f"Backup created: {path}")
+Keep your folders neat and organized.
 
-    def check_junk(self):
-        junk = detect_junk(self.src_var.get())
-        if junk:
-            messagebox.showwarning("Junk Files", "\n".join(junk))
-            self.update_status("Junk files found", "orange")
-        else:
-            self.update_status("No junk files", "lightgreen")
+Detect unnecessary (junk) files.
 
-    def check_malware(self):
-        infected = scan_malware(self.src_var.get())
-        if infected:
-            messagebox.showerror("Malware Found", "\n".join(infected))
-            self.update_status("Malware detected", "red")
-        else:
-            self.update_status("No malware found")
+Provide undo and backup options for safety.
 
-    def send_email(self):
-        success = send_email_alert("recipient@example.com", "Organizer Alert", "This is a test alert from Smart Organizer.")
-        if success:
-            self.update_status("Email sent successfully")
-        else:
-            self.update_status("Email failed", "red")
+Send email alerts and system notifications for updates.
 
-# ---------------- LOGIN WINDOW ----------------
-class LoginWindow:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Login - Smart Organizer")
-        self.root.geometry("400x250")
-        self.root.configure(bg="#1e1e2f")
+You don’t need any technical knowledge — the interface is simple, modern, and intuitive.
 
-        tk.Label(root, text="Login", font=("Arial", 18, "bold"), bg="#1e1e2f", fg="white").pack(pady=20)
+💻 System Requirements
+Component	Minimum Requirement
+Operating System	Windows 10 / 11, macOS, or Linux
+Python Version	Python 3.8 or later
+RAM	4 GB or higher
+Storage	At least 100 MB free space
+Libraries	Tkinter, shutil, plyer, Pillow, smtplib
+⚙️ Installation Guide
+Step 1: Download the Project
 
-        tk.Label(root, text="Username", bg="#1e1e2f", fg="white").pack()
-        self.username = tk.Entry(root)
-        self.username.pack(pady=5)
+Download or clone the folder from your source:
 
-        tk.Label(root, text="Password", bg="#1e1e2f", fg="white").pack()
-        self.password = tk.Entry(root, show="*")
-        self.password.pack(pady=5)
+git clone https://github.com/yourusername/smart-file-organizer.git
 
-        tk.Button(root, text="Login", command=self.check_login, bg="#3a3a4f", fg="white").pack(pady=15)
 
-    def check_login(self):
-        user = self.username.get()
-        pwd = self.password.get()
-        if login(user, pwd):
-            self.root.destroy()
-            main_app()
-        else:
-            messagebox.showerror("Error", "Invalid credentials!")
+Or manually download the .zip and extract it.
 
-def main_app():
-    root = tk.Tk()
-    app = SmartOrganizerApp(root)
-    root.mainloop()
+Step 2: Install Required Libraries
 
-if __name__ == "__main__":
-    login_root = tk.Tk()
-    LoginWindow(login_root)
-    login_root.mainloop()
+Open Command Prompt (Windows) or Terminal (Mac/Linux) and type:
+
+pip install pillow plyer
+
+Step 3: Run the Application
+
+Use this command:
+
+python smart_file_organizer.py
+
+🚪 Launching the Application
+
+After running the command, a login screen will appear.
+
+🔐 Login Screen
+
+Purpose: To secure access to the organizer.
+
+Default Credentials
+
+Username: admin
+
+Password: 1234
+
+💡 You can change these credentials in the code under the variable USERS.
+
+If login is successful → The main organizer window opens.
+If credentials are wrong → You’ll see a “Login Failed” message.
+
+🖥 Main Interface Overview
+
+Once logged in, you’ll see two main areas:
+
+🔸 Left Sidebar
+
+Contains all action buttons:
+
+📑 Organize Files
+
+↩️ Undo
+
+💾 Backup
+
+🧹 Detect Junk
+
+⚠️ Scan Malware
+
+✉️ Send Email
+
+🔸 Right Main Panel (Centered)
+
+Contains:
+
+Source Folder (bold text) — Folder where your unorganized files are.
+
+Destination Folder (bold text) — Folder where organized files will be stored.
+
+Status Bar — Displays live status messages (e.g., “Status: Ready” or “Organizing Complete”).
+
+🧩 Feature-by-Feature Instructions
+1️⃣ Organize Files
+
+Purpose: Automatically sorts all files from the source folder into categorized subfolders in the destination folder.
+
+Steps:
+
+Click Browse beside “Source Folder” and select your input folder.
+
+Click Browse beside “Destination Folder” and choose where organized files should go.
+
+Click 📑 Organize Files.
+
+Wait a few seconds — progress will be shown in the status line.
+
+A popup will ask:
+
+Do you want to create a backup of organized files? (Yes/No)
+
+
+Yes → Creates a ZIP backup.
+
+No → Skips backup.
+
+Result:
+
+Your destination folder now contains subfolders like:
+
+Images/
+Documents/
+Videos/
+Audio/
+Archives/
+Others/
+
+2️⃣ Undo Changes
+
+Purpose: Restores files that were recently moved back to their original location.
+
+Steps:
+
+Click ↩️ Undo.
+
+Wait until the status bar shows Undo Completed.
+
+Tip:
+
+Undo works only for the last organization action done in the same session.
+
+3️⃣ Backup Manager
+
+Purpose: Creates a compressed ZIP file of all organized files.
+
+Steps:
+
+Click 💾 Backup.
+
+Choose where to save your backup (destination path).
+
+A .zip file will be created automatically.
+
+Result:
+
+A folder named /backups/ appears in your project directory.
+
+4️⃣ Junk File Detection
+
+Purpose: Detects and lists temporary or unnecessary files.
+
+Detects:
+
+.tmp
+
+.log
+
+.bak
+
+Steps:
+
+Click 🧹 Detect Junk.
+
+A popup shows a list of junk files.
+
+You can manually delete them after review.
+
+5️⃣ Harmful File Scan
+
+Purpose: Flags potentially harmful files (executables or scripts) for manual review.
+
+Detects:
+
+.exe, .bat, .cmd, .sh, .jar, .vbs, .js
+
+Steps:
+
+Click ⚠️ Scan Malware.
+
+The system will display suspicious files.
+
+You can review and delete them manually.
+
+⚠️ Note: This is not a virus scanner; it only identifies potentially risky file types.
+
+6️⃣ Email Alerts
+
+Purpose: Send email notifications for backup or organization updates.
+
+Requirements:
+
+Enable 2-Step Verification in Gmail.
+
+Generate an App Password.
+
+Update credentials in the script:
+
+from_email = "your_email@gmail.com"
+password = "your_app_password"
+
+Steps:
+
+Click ✉️ Send Email.
+
+A message box confirms if the mail was sent successfully.
+
+🔔 Notifications
+
+Smart File Organizer uses desktop notifications to keep you informed of:
+
+Task completion (organization, undo, backup).
+
+Errors or missing folders.
+
+Email success/failure.
+
+Example:
+
+✅ Files organized successfully!
+
+📂 Supported File Types
+
+The application supports over 100+ file extensions, grouped into categories:
+
+Images (jpg, png, gif, heic, etc.)
+
+Documents (pdf, txt, docx, md, etc.)
+
+Audio / Video
+
+Archives
+
+Spreadsheets
+
+Executables
+
+Design Files
+
+Fonts
+
+Others (Unrecognized)
+
+All extensions are listed in the FILE_TYPES dictionary inside the code.
+
+💾 Backup Folder Information
+Backup Location	Format	Description
+/backups/	.zip	Compressed copy of organized files
+Default Name	backup_YYYYMMDD_HHMM.zip	Timestamped for uniqueness
+🧹 Junk and Harmful File Indicators
+Icon	Meaning
+🧹	Temporary or log files detected
+⚠️	Suspicious executable files found
+🧰 Troubleshooting
+Problem	Possible Cause	Solution
+App not starting	Missing libraries	Run pip install pillow plyer
+Login fails	Wrong username/password	Use default: admin / 1234
+Notifications not showing	System notifications off	Enable system notifications
+Email not sent	Invalid Gmail setup	Use App Password, not your real password
+Undo not working	Restarted program	Undo works only within same session
+❓ FAQ
+
+Q1: Can I organize files from multiple folders at once?
+A: Currently, you can organize one folder at a time.
+
+Q2: Can I change folder categories or add new ones?
+A: Yes, you can edit the FILE_TYPES dictionary in the code.
+
+Q3: Does this delete files?
+A: No. It only moves or copies them.
+
+Q4: Can I change the theme?
+A: Yes, you can modify the background color (#1e1e2f) in the GUI section.
+
+🔒 Safety and Privacy Notes
+
+Your login credentials are stored locally (not online).
+
+The program does not upload or share any user data.
+
+Always scan unknown files with antivirus software before opening them.
+
+Email credentials should be protected and not shared.
+
+👩‍💻 Credits & License
+
+Author: Ankita Kamble
+Language: Python 3.10+
+Libraries Used: Tkinter, shutil, plyer, pillow, smtplib
+License: MIT
+Category: Desktop Utility Tool
+Platform: Windows / macOS / Linux
+
+🪄 Summary
+
+The Smart File Organizer is a powerful and secure desktop tool to keep your system neat and efficient.
+It provides a clean, centered interface, automatic backups, and full control over your file management workflow.
+
+Smart. Organized. Secure. Simplify your digital life.
