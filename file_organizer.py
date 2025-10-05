@@ -16,14 +16,63 @@ def login(username, password):
 
 # ---------------- FILE TYPES ----------------
 FILE_TYPES = {
-    "Images": ['jpg', 'jpeg', 'png', 'gif'],
-    "Documents": ['pdf', 'docx', 'txt'],
-    "Videos": ['mp4', 'mkv', 'avi'],
-    "Audio": ['mp3', 'wav'],
-    "Archives": ['zip', 'rar'],
-    "Spreadsheets": ['xlsx', 'csv'],
-    "Presentations": ['pptx'],
-    "Others": []
+    "Images": [
+        'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'svg', 'webp', 'heic'
+    ],
+
+    "Documents": [
+        'pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'tex', 'md', 'log'
+    ],
+
+    "Videos": [
+        'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mpeg', '3gp'
+    ],
+
+    "Audio": [
+        'mp3', 'wav', 'aac', 'flac', 'ogg', 'wma', 'm4a', 'amr'
+    ],
+
+    "Archives": [
+        'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'iso'
+    ],
+
+    "Spreadsheets": [
+        'xlsx', 'xls', 'ods', 'csv', 'tsv'
+    ],
+
+    "Presentations": [
+        'ppt', 'pptx', 'key', 'odp'
+    ],
+
+    "Executables": [
+        'exe', 'msi', 'bat', 'cmd', 'sh', 'apk', 'jar', 'py', 'js'
+    ],
+
+    "Databases": [
+        'db', 'sqlite', 'sql', 'mdb', 'accdb'
+    ],
+
+    "Design & 3D": [
+        'psd', 'ai', 'xd', 'fig', 'sketch', 'blend', 'obj', 'fbx', 'stl'
+    ],
+
+    "Code Files": [
+        'py', 'java', 'cpp', 'c', 'cs', 'html', 'css', 'js', 'php', 'xml', 'json', 'ipynb'
+    ],
+
+    "System Files": [
+        'dll', 'sys', 'ini', 'cfg', 'drv'
+    ],
+
+    "Fonts": [
+        'ttf', 'otf', 'woff', 'woff2'
+    ],
+
+    "Icons": [
+        'ico', 'icns', 'svg', 'cur', 'ani'
+    ],
+
+    "Others": []  # fallback for unrecognized extensions
 }
 
 last_actions = []  # For undo
@@ -77,7 +126,7 @@ def detect_junk(folder):
     return [os.path.join(root, f) for root, _, files in os.walk(folder) for f in files if f.split('.')[-1].lower() in junk_exts]
 
 # ---------------- MALWARE SCAN ----------------
-def scan_malware(folder):
+'''def scan_malware(folder):
     known_hashes = {"e99a18c428cb38d5f260853678922e03"}  # example MD5
     infected = []
     for root, _, files in os.walk(folder):
@@ -88,7 +137,7 @@ def scan_malware(folder):
                         infected.append(os.path.join(root, file))
             except:
                 pass
-    return infected
+    return infected '''
 
 # ---------------- NOTIFICATION ----------------
 def send_notification(title, message):
@@ -141,20 +190,26 @@ class SmartOrganizerApp:
             b = tk.Button(sidebar, text=txt, command=cmd, bg="#3a3a4f", fg="white", relief="flat", pady=10, anchor="w")
             b.pack(fill="x", padx=15, pady=5)
 
-        # Main panel
+        # Main panel (centered layout)
         main_panel = tk.Frame(root, bg="#1e1e2f")
-        main_panel.pack(side="right", expand=True, fill="both", padx=20, pady=20)
+        main_panel.pack(side="right", expand=True, fill="both")
 
-        tk.Label(main_panel, text="Source Folder", bg="#1e1e2f", fg="white").pack(anchor="w")
-        tk.Entry(main_panel, textvariable=self.src_var, width=50).pack()
-        tk.Button(main_panel, text="Browse", command=self.browse_src, bg="#3a3a4f", fg="white").pack(pady=5)
+        center_frame = tk.Frame(main_panel, bg="#1e1e2f")
+        center_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        tk.Label(main_panel, text="Destination Folder", bg="#1e1e2f", fg="white").pack(anchor="w")
-        tk.Entry(main_panel, textvariable=self.dst_var, width=50).pack()
-        tk.Button(main_panel, text="Browse", command=self.browse_dst, bg="#3a3a4f", fg="white").pack(pady=5)
+        # Source Folder
+        tk.Label(center_frame, text="Source Folder", font=("Arial", 10, "bold"), bg="#1e1e2f", fg="white").pack(pady=5)
+        tk.Entry(center_frame, textvariable=self.src_var, width=50, justify="center").pack()
+        tk.Button(center_frame, text="Browse", command=self.browse_src, bg="#3a3a4f", fg="white").pack(pady=10)
 
-        self.status_label = tk.Label(main_panel, text="Status: Ready", bg="#1e1e2f", fg="lightgreen", anchor="w")
-        self.status_label.pack(fill="x", pady=10)
+        # Destination Folder
+        tk.Label(center_frame, text="Destination Folder", font=("Arial", 10, "bold"), bg="#1e1e2f", fg="white").pack(pady=5)
+        tk.Entry(center_frame, textvariable=self.dst_var, width=50, justify="center").pack()
+        tk.Button(center_frame, text="Browse", command=self.browse_dst, bg="#3a3a4f", fg="white").pack(pady=10)
+
+        # Status
+        self.status_label = tk.Label(center_frame, text="Status: Ready", bg="#1e1e2f", fg="lightgreen", font=("Arial", 10, "bold"))
+        self.status_label.pack(pady=10)
 
     def browse_src(self):
         self.src_var.set(filedialog.askdirectory())
@@ -191,7 +246,7 @@ class SmartOrganizerApp:
             self.update_status("No junk files", "lightgreen")
 
     def check_malware(self):
-        infected = scan_malware(self.src_var.get())
+        infected = []  # placeholder since scan_malware is commented out
         if infected:
             messagebox.showerror("Malware Found", "\n".join(infected))
             self.update_status("Malware detected", "red")
